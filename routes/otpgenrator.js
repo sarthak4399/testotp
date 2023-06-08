@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const axios = require('axios');
 const path = require('path');
 const hbs = require('nodemailer-express-handlebars');
+const { body } = require('express-validator');
 
 // Configure nodemailer with your email service credentials
 const transporter = nodemailer.createTransport({
@@ -28,20 +29,12 @@ const handlebarOptions = {
 transporter.use('compile', hbs(handlebarOptions));
 
 router.post('/generate-otp', async (req, res) => {
-  const { email } = req.body;
-
+  const { email } = req.body
   try {
     // Make a request to the API to check if the email exists
-    const response = await axios.get(`https://tsk-final-backend.vercel.app/api/members/users?email=${email}`);
-    const user = OTP.findOne(req.params.email)
-    if(user === null){
-        res.status(400).send("no user found")
-    }else{
-        res.status(200).send(user)
-    }
+    const response = await axios.get(`https://tsk-final-backend.vercel.app/api/members/users?email=${{email}}`);
     const userExists = response.data.exists;
-
-    if (!userExists) {
+    if (userExists) {
       return res.status(400).json({ error: 'Email does not exist' });
     }
 
@@ -49,11 +42,11 @@ router.post('/generate-otp', async (req, res) => {
 
     const newOTP = new OTP({ otp });
     await newOTP.save();
-
+    res.send(email)
     // Compose the email
     const mailOptions = {
       from: '"Taskstack" <neonsha@gmail.com>',
-      to: email,
+      to: {email},
       subject: 'OTP Verification',
       template: 'otp',
       context:{

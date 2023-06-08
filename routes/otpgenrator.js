@@ -3,6 +3,8 @@ const router = express.Router();
 const OTP = require("../models/otp");
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const path = require('path');
+const hbs = require('nodemailer-express-handlebars');
 
 // Configure nodemailer with your email service credentials
 const transporter = nodemailer.createTransport({
@@ -14,20 +16,29 @@ const transporter = nodemailer.createTransport({
 });
 
 const handlebarOptions = {
-    viewEngine: {
-        partialsDir: path.resolve(),
-        defaultLayout: false,
-    },
-    viewPath: path.resolve('./views/')
+  viewEngine: {
+    extname: '.hbs',
+    partialsDir: path.resolve('./views/partials'),
+    defaultLayout: false,
+  },
+  viewPath: path.resolve('./views'),
+  extName: '.hbs',
 };
-transporter.use("compile", hbs(handlebarOptions))
+
+transporter.use('compile', hbs(handlebarOptions));
+
 router.post('/generate-otp', async (req, res) => {
   const { email } = req.body;
 
   try {
     // Make a request to the API to check if the email exists
     const response = await axios.get(`https://tsk-final-backend.vercel.app/api/members/users?email=${email}`);
-
+    const user = OTP.findOne(req.params.email)
+    if(user === null){
+        res.status(400).send("no user found")
+    }else{
+        res.status(200).send(user)
+    }
     const userExists = response.data.exists;
 
     if (!userExists) {
